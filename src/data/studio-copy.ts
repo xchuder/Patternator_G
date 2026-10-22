@@ -1,12 +1,13 @@
 export const studioCopy = {
-  phase: "Phase 1",
-  dropTitle: "Drop an image",
-  dropNote: "PNG, JPG, or WebP",
+  phase: "Phase 2",
+  dropTitle: "Drop an image or a video",
+  dropNote: "PNG, JPG, WebP, MP4, or WebM",
   choose: "Choose file",
   replace: "Replace image",
   sourceTab: "Source",
-  filterTab: "Filter",
-  effectTab: "Effect",
+  adjustTab: "Adjust",
+  prefilterSection: "Pre-filter",
+  effectSection: "Effect",
   exportTab: "Export",
   download: "Download PNG",
   preparing: "Preparing PNG…",
@@ -15,7 +16,14 @@ export const studioCopy = {
   browserLink: "Browser check",
   noImage: "No image yet",
   readError: "Could not read that image.",
-  typeError: "Use a PNG, JPG, or WebP file.",
+  typeError: "Use a PNG, JPG, WebP, MP4, or WebM file.",
+  videoReadError: "Could not read that video.",
+  noVideoTrack: "That file has no video track.",
+  webCodecsMissing:
+    "This browser has no WebCodecs video decoder, so video preview stays off. Still images still work. Chrome, Edge, Firefox desktop, or Safari 26+ can play the preview.",
+  leaveClip: "Left that clip out.",
+  play: "Play",
+  pause: "Pause",
   exportFailed: "Could not create the PNG.",
   emptyCharset: "Add at least one character.",
   webgl2: "WebGL2",
@@ -49,6 +57,22 @@ export function exportSizeMessage(width: number, height: number): string {
 
 export function videoLimitMessage(desktop: number, mobile: number): string {
   return `Video export, in a later phase, caps at ${desktop}p on desktop and ${mobile}p on phones. Images are not capped.`;
+}
+
+export function videoTooLongMessage(duration: number, maxSeconds: number): string {
+  return `This clip is ${duration.toFixed(1)}s. Use ${maxSeconds} seconds from the start time below, or leave it out.`;
+}
+
+export function videoFrameMessage(index: number, frameCount: number, seconds: number): string {
+  return `Frame ${index} / ${frameCount} · ${seconds.toFixed(2)}s`;
+}
+
+export function videoExportMessage(): string {
+  return "PNG saves the current frame. MP4 export is a later phase.";
+}
+
+export function videoSpeedLabel(speed: number): string {
+  return `${speed}×`;
 }
 
 export function fileMeta(name: string, width: number, height: number, backend: string): string {

@@ -268,7 +268,9 @@ export class GlRenderer implements Renderer {
       targetWidth: width,
       targetHeight: height,
     };
-    this.renderPrefilter(frame.prefilter, width, height);
+    const directSource = isIdentityPrefilter(frame.prefilter);
+    if (!directSource) this.renderPrefilter(frame.prefilter, width, height);
+    const image = directSource ? this.source : this.filtered.texture;
     if (frame.effectId === "ascii") {
       const charset = normalizeCharset(frame.ascii.charset, defaults.limits.maxGlyphs);
       if (charset.length === 0) {
@@ -281,11 +283,11 @@ export class GlRenderer implements Renderer {
     }
     if (frame.effectId === "dither") {
       const cell = Math.max(1, Math.round(frame.dither.cellScale));
-      if (cell > 1) this.downsample(cell, draw.sourceWidth, draw.sourceHeight);
+      if (cell > 1) this.downsample(cell, draw.sourceWidth, draw.sourceHeight, image);
       gl.bindFramebuffer(gl.FRAMEBUFFER, target);
       gl.viewport(0, 0, width, height);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, cell > 1 ? this.grid.texture : this.filtered.texture);
+      gl.bindTexture(gl.TEXTURE_2D, cell > 1 ? this.grid.texture : image);
       const program = this.programFor("dither");
       gl.useProgram(program);
       effects.dither.syncGpu(gl, this.ditherGpu, frame.dither);
@@ -297,7 +299,7 @@ export class GlRenderer implements Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, target);
     gl.viewport(0, 0, width, height);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.filtered.texture);
+    gl.bindTexture(gl.TEXTURE_2D, image);
     if (frame.effectId === "ascii") {
       const program = this.programFor("ascii");
       gl.useProgram(program);
@@ -313,7 +315,12 @@ export class GlRenderer implements Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  private downsample(cell: number, sourceWidth: number, sourceHeight: number): void {
+  private downsample(
+    cell: number,
+    sourceWidth: number,
+    sourceHeight: number,
+    source: WebGLTexture,
+  ): void {
     const gl = this.gl;
     const cols = Math.max(1, Math.ceil(sourceWidth / cell));
     const rows = Math.max(1, Math.ceil(sourceHeight / cell));
@@ -325,7 +332,7 @@ export class GlRenderer implements Renderer {
     gl.viewport(0, 0, cols, rows);
     gl.useProgram(this.downProgram);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.filtered.texture);
+    gl.bindTexture(gl.TEXTURE_2D, source);
     const image = gl.getUniformLocation(this.downProgram, "uImage");
     const sourceSize = gl.getUniformLocation(this.downProgram, "uSourceSize");
     const gridSize = gl.getUniformLocation(this.downProgram, "uGridSize");
@@ -374,4 +381,15 @@ export class GlRenderer implements Renderer {
     if (program === undefined) throw new Error(`Missing program ${id}`);
     return program;
   }
+}
+
+function isIdentityPrefilter(params: PrefilterParams): boolean {
+  const spec = defaults.prefilter;
+  return (
+    params.brightness === spec.brightness.default &&
+    params.contrast === spec.contrast.default &&
+    params.gamma === spec.gamma.default &&
+    params.threshold <= spec.threshold.off &&
+    params.invert === spec.invert.default
+  );
 }

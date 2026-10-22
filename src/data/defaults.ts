@@ -29,6 +29,21 @@ export interface Defaults {
     atlasCell: number;
     maxGlyphs: number;
   };
+  video: {
+    accept: readonly string[];
+    extensions: readonly string[];
+    maxSeconds: number;
+    speeds: readonly number[];
+    defaultSpeed: number;
+    desktopMaxWidth: number;
+    desktopMaxHeight: number;
+    mobileMaxWidth: number;
+    mobileMaxHeight: number;
+    mobileQuery: string;
+    bufferFrames: number;
+    scrubMs: number;
+    diffusionWarning: string;
+  };
   view: {
     minPercent: number;
     maxPercent: number;

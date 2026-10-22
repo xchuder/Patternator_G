@@ -360,6 +360,54 @@ h2 {
   font-size: 0.85rem;
 }
 
+.transport {
+  position: absolute;
+  z-index: 4;
+  left: 0.5rem;
+  right: 0.5rem;
+  top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: calc(100% - 1rem);
+}
+
+.transport-timeline {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  min-height: 44px;
+}
+
+.transport-frame {
+  color: var(--ink);
+  font-size: 0.85rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.transport-speeds {
+  flex: 1 1 12rem;
+}
+
+.trim-panel {
+  position: absolute;
+  z-index: 5;
+  left: 0.75rem;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(24rem, calc(100% - 1.5rem));
+  margin-inline: auto;
+  padding: 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
 .stage.dragging .stage-frame {
   outline: 2px solid #fff;
   outline-offset: -2px;
@@ -464,10 +512,57 @@ input[type="color"] {
 .tab-panel {
   overflow: auto;
   min-height: 0;
-  padding: 0.85rem 0.9rem 1rem;
+  padding: 0.35rem 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fold {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.fold-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.fold-summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold-summary::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-0.1rem) rotate(45deg);
+  flex: 0 0 auto;
+}
+
+.fold[open] > .fold-summary::before {
+  transform: translateY(0.1rem) rotate(-135deg);
+}
+
+.fold-body,
+.fold-fields {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  min-width: 0;
+}
+
+.fold-body {
+  padding-bottom: 0.85rem;
 }
 
 .field {

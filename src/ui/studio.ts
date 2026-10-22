@@ -1,4 +1,4 @@
-import { defaults, initialAscii, initialDither, initialEffectId, initialPixelate, initialPrefilter, type AsciiParams, type DitherParams, type EffectId, type PixelateParams, type PrefilterParams } from "../data/defaults";
+import { defaults, initialAscii, initialDither, initialEffectId, initialPixelate, initialPrefilter, isDiffusionMethod, type AsciiParams, type DitherParams, type EffectId, type PixelateParams, type PrefilterParams } from "../data/defaults";
 import { loadGlyphFonts } from "../effects/ascii/atlas";
 import { charsetWarnings } from "../effects/ascii/charset";
 import { effectOrder, effects } from "../effects/registry";
@@ -13,12 +13,18 @@ import {
   studioCopy,
   textureLimitMessage,
   tooLargeMessage,
+  videoExportMessage,
   videoLimitMessage,
+  videoTooLongMessage,
 } from "../data/studio-copy";
+import { activeVideoLimits, isAcceptedVideo } from "../video/accept";
+import { hasWebCodecs } from "../video/detect";
+import { VideoPlayer } from "../video/player";
 import { mountControls, type ControlHandle } from "./controls";
+import { mountTransport } from "./transport";
 import { mountViewport, type ViewportHandle } from "./viewport";
 
-type TabId = "source" | "filter" | "effect" | "export";
+type TabId = "source" | "adjust" | "export";
 
 interface StudioState {
   bitmap: ImageBitmap | null;
@@ -28,6 +34,7 @@ interface StudioState {
   ascii: AsciiParams;
   pixelate: PixelateParams;
   dither: DitherParams;
+  video: boolean;
 }
 
 export function mountStudio(root: HTMLElement): () => void {
@@ -39,12 +46,13 @@ export function mountStudio(root: HTMLElement): () => void {
     ascii: initialAscii(),
     pixelate: initialPixelate(),
     dither: initialDither(),
+    video: false,
   };
 
   const fileInput = document.createElement("input");
   fileInput.type = "file";
   fileInput.className = "file-input";
-  fileInput.accept = defaults.image.accept.join(",");
+  fileInput.accept = [...defaults.image.accept, ...defaults.video.accept].join(",");
   fileInput.tabIndex = -1;
 
   const choose = document.createElement("button");
@@ -71,9 +79,32 @@ export function mountStudio(root: HTMLElement): () => void {
   canvas.className = "preview";
   canvas.hidden = true;
 
+  const trimText = document.createElement("p");
+  trimText.className = "drop-note";
+  const trimStart = document.createElement("input");
+  trimStart.type = "number";
+  trimStart.className = "zoom-input";
+  trimStart.min = "0";
+  trimStart.step = "0.1";
+  trimStart.value = "0";
+  trimStart.setAttribute("aria-label", "Start time in seconds");
+  const trimUse = document.createElement("button");
+  trimUse.type = "button";
+  trimUse.className = "button button-strong";
+  trimUse.textContent = `Use ${defaults.video.maxSeconds} seconds`;
+  const trimLeave = document.createElement("button");
+  trimLeave.type = "button";
+  trimLeave.className = "button";
+  trimLeave.textContent = "Don't use this file";
+  const trim = document.createElement("form");
+  trim.className = "trim-panel";
+  trim.dataset.viewChrome = "true";
+  trim.hidden = true;
+  trim.append(trimText, trimStart, trimUse, trimLeave);
+
   const frame = document.createElement("div");
   frame.className = "stage-frame";
-  frame.append(canvas, drop);
+  frame.append(canvas, drop, trim);
 
   const stage = document.createElement("div");
   stage.className = "stage";
@@ -90,8 +121,7 @@ export function mountStudio(root: HTMLElement): () => void {
 
   const panels = {
     source: document.createElement("div"),
-    filter: document.createElement("div"),
-    effect: document.createElement("div"),
+    adjust: document.createElement("div"),
     export: document.createElement("div"),
   };
   for (const panel of Object.values(panels)) panel.className = "tab-panel";
@@ -100,16 +130,25 @@ export function mountStudio(root: HTMLElement): () => void {
   privacy.className = "quiet";
   privacy.textContent = studioCopy.privacy;
   panels.source.append(replace, privacy);
+  if (!hasWebCodecs()) {
+    const codecs = document.createElement("p");
+    codecs.className = "notice";
+    codecs.textContent = studioCopy.webCodecsMissing;
+    panels.source.append(codecs);
+  }
 
-  mountFilter(panels.filter, state, () => {
+  const prefilterBody = mountSection(panels.adjust, studioCopy.prefilterSection);
+  mountFilter(prefilterBody, state, () => {
     requestDraw();
   });
 
+  const effectBody = mountSection(panels.adjust, studioCopy.effectSection);
   const effectNotice = document.createElement("p");
   effectNotice.className = "notice";
   effectNotice.setAttribute("role", "status");
   const effectFields = document.createElement("div");
-  panels.effect.append(effectNotice, effectFields);
+  effectFields.className = "fold-fields";
+  effectBody.append(effectNotice, effectFields);
 
   const exportButton = document.createElement("button");
   exportButton.type = "button";
@@ -132,8 +171,7 @@ export function mountStudio(root: HTMLElement): () => void {
   tablist.setAttribute("role", "tablist");
   const tabCopy: { id: TabId; label: string }[] = [
     { id: "source", label: studioCopy.sourceTab },
-    { id: "filter", label: studioCopy.filterTab },
-    { id: "effect", label: studioCopy.effectTab },
+    { id: "adjust", label: studioCopy.adjustTab },
     { id: "export", label: studioCopy.exportTab },
   ];
   for (const tab of tabCopy) {
@@ -151,7 +189,7 @@ export function mountStudio(root: HTMLElement): () => void {
 
   const sheet = document.createElement("aside");
   sheet.className = "sheet";
-  sheet.append(meta, alert, tablist, panels.source, panels.filter, panels.effect, panels.export);
+  sheet.append(meta, alert, tablist, panels.source, panels.adjust, panels.export);
 
   const browserLink = document.createElement("a");
   browserLink.className = "nav-link";
@@ -199,17 +237,18 @@ export function mountStudio(root: HTMLElement): () => void {
       return;
     }
     meta.textContent = fileMeta(state.fileName, bitmap.width, bitmap.height, backendLabel);
-    exportSize.textContent = exportSizeMessage(bitmap.width, bitmap.height);
+    exportSize.textContent = state.video
+      ? videoExportMessage()
+      : exportSizeMessage(bitmap.width, bitmap.height);
     exportButton.disabled = exporting;
   };
 
   const paintNotice = (): void => {
-    if (state.effectId !== "ascii") {
-      effectNotice.hidden = true;
-      effectNotice.textContent = "";
-      return;
+    const messages: string[] = [];
+    if (state.effectId === "ascii") messages.push(...charsetWarnings(state.ascii.charset));
+    if (state.video && state.effectId === "dither" && isDiffusionMethod(state.dither.method)) {
+      messages.push(defaults.video.diffusionWarning);
     }
-    const messages = charsetWarnings(state.ascii.charset);
     effectNotice.hidden = messages.length === 0;
     effectNotice.textContent = messages.join(" ");
   };
@@ -267,10 +306,10 @@ export function mountStudio(root: HTMLElement): () => void {
     });
   };
 
-  const drawNow = (): void => {
+  const drawNow = (fitView = true): void => {
     const bitmap = state.bitmap;
     if (bitmap === null || !fontsReady) return;
-    viewport.layout();
+    if (fitView) viewport.layout();
     try {
       renderer.draw(bitmap, {
         ...frameBody(state),
@@ -283,8 +322,69 @@ export function mountStudio(root: HTMLElement): () => void {
     }
   };
 
+  let clipStart = 0;
+  let fittedVideo = false;
+  let timelineAt = -1;
+
+  const stopVideo = (): void => {
+    const wasVideo = state.video;
+    state.video = false;
+    player.pause();
+    player.close();
+    transport.setVisible(false);
+    transport.setPlaying(false);
+    trim.hidden = true;
+    if (wasVideo) state.bitmap = null;
+  };
+
+  const showFrame = (bitmap: ImageBitmap, index: number, frameCount: number, seconds: number, windowSeconds: number): void => {
+    if (exporting) return;
+    state.video = true;
+    state.bitmap = bitmap;
+    canvas.hidden = false;
+    drop.hidden = true;
+    renderer.setSource(bitmap);
+    transport.setVisible(true);
+    transport.setFrame(index, frameCount, seconds);
+    if (!player.isPlaying || Math.abs(seconds - timelineAt) >= 0.1) {
+      transport.setTimeline(windowSeconds, seconds);
+      timelineAt = seconds;
+    }
+    if (!fittedVideo) {
+      viewport.reset(bitmap.width, bitmap.height);
+      fittedVideo = true;
+      paintMeta();
+      paintNotice();
+      drawNow(true);
+      return;
+    }
+    drawNow(false);
+  };
+
+  const loadVideo = (file: File): void => {
+    if (!hasWebCodecs()) {
+      showAlert(studioCopy.webCodecsMissing);
+      return;
+    }
+    if (!state.video) state.bitmap?.close();
+    else player.close();
+    state.bitmap = null;
+    state.video = true;
+    state.fileName = file.name || "video";
+    fittedVideo = false;
+    trim.hidden = true;
+    transport.setVisible(false);
+    const limits = activeVideoLimits();
+    player.open(file, limits.maxWidth, limits.maxHeight);
+  };
+
   const loadFile = (file: File): void => {
     showAlert("");
+    if (isAcceptedVideo(file)) {
+      loadVideo(file);
+      return;
+    }
+    stopVideo();
     void decodeImage(file)
       .then((bitmap) => {
         if (bitmap.width > renderer.maxTextureSize || bitmap.height > renderer.maxTextureSize) {
@@ -300,7 +400,7 @@ export function mountStudio(root: HTMLElement): () => void {
         renderer.setSource(bitmap);
         viewport.reset(bitmap.width, bitmap.height);
         paintMeta();
-        showTab("effect");
+        showTab("adjust");
         requestDraw();
       })
       .catch((error: unknown) => {
@@ -380,6 +480,75 @@ export function mountStudio(root: HTMLElement): () => void {
   observer.observe(frame);
   canvas.addEventListener("render-fault", onRenderFault);
 
+  const player = new VideoPlayer({
+    onInfo(info) {
+      clipStart = 0;
+      if (info.tooLong) {
+        trimText.textContent = videoTooLongMessage(info.duration, defaults.video.maxSeconds);
+        trimStart.max = String(Math.max(0, info.duration - defaults.video.maxSeconds));
+        trimStart.value = "0";
+        trim.dataset.duration = String(info.duration);
+        trim.hidden = false;
+        transport.setVisible(false);
+        return;
+      }
+      trim.hidden = true;
+      player.use(0, info.duration);
+      transport.setVisible(true);
+      transport.setTimeline(info.duration, 0);
+      transport.setPlaying(false);
+    },
+    onFrame(frame) {
+      clipStart = frame.rangeStart;
+      transport.setFps(frame.fps);
+      showFrame(frame.bitmap, frame.index, frame.frameCount, frame.time, frame.rangeEnd - frame.rangeStart);
+    },
+    onEnded() {
+      transport.setPlaying(false);
+    },
+    onError(code) {
+      showAlert(code === "no-video-track" ? studioCopy.noVideoTrack : studioCopy.videoReadError);
+      stopVideo();
+      drop.hidden = false;
+      canvas.hidden = true;
+    },
+  });
+
+  const transport = mountTransport(frame, {
+    onToggle(playing) {
+      if (playing) player.play();
+      else player.pause();
+    },
+    onSeek(time) {
+      player.seek(clipStart + time);
+    },
+    onSpeed(speed) {
+      player.setSpeed(speed);
+    },
+  });
+
+  trimUse.addEventListener("click", () => {
+    const duration = Number(trim.dataset.duration ?? "0");
+    const latest = Math.max(0, duration - defaults.video.maxSeconds);
+    const start = Math.min(latest, Math.max(0, Number(trimStart.value) || 0));
+    clipStart = start;
+    trim.hidden = true;
+    player.use(start, defaults.video.maxSeconds);
+    transport.setVisible(true);
+    transport.setTimeline(defaults.video.maxSeconds, 0);
+    transport.setPlaying(false);
+  });
+  trimLeave.addEventListener("click", () => {
+    stopVideo();
+    drop.hidden = false;
+    canvas.hidden = true;
+    paintMeta();
+    showAlert(studioCopy.leaveClip);
+  });
+  trim.addEventListener("submit", (event) => {
+    event.preventDefault();
+  });
+
   showTab("source");
   mountEffectFields();
   paintNotice();
@@ -397,7 +566,8 @@ export function mountStudio(root: HTMLElement): () => void {
     window.removeEventListener("dragover", stopNavigation);
     window.removeEventListener("drop", stopNavigation);
     viewport.dispose();
-    state.bitmap?.close();
+    player.dispose();
+    if (!state.video) state.bitmap?.close();
     renderer.dispose();
   };
 
@@ -405,6 +575,20 @@ export function mountStudio(root: HTMLElement): () => void {
     const detail = event instanceof CustomEvent && typeof event.detail === "string" ? event.detail : "";
     showAlert(detail.length > 0 ? detail : studioCopy.readError);
   }
+}
+
+function mountSection(parent: HTMLElement, title: string): HTMLElement {
+  const details = document.createElement("details");
+  details.className = "fold";
+  details.open = true;
+  const summary = document.createElement("summary");
+  summary.className = "fold-summary";
+  summary.textContent = title;
+  const body = document.createElement("div");
+  body.className = "fold-body";
+  details.append(summary, body);
+  parent.append(details);
+  return body;
 }
 
 function mountFilter(parent: HTMLElement, state: StudioState, onChange: () => void): void {

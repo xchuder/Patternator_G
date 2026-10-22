@@ -48,6 +48,21 @@
       "default": false
     }
   },
+  "video": {
+    "accept": ["video/mp4", "video/webm"],
+    "extensions": [".mp4", ".webm"],
+    "maxSeconds": 30,
+    "speeds": [0.25, 0.5, 1, 2, 4],
+    "defaultSpeed": 1,
+    "desktopMaxWidth": 1920,
+    "desktopMaxHeight": 1080,
+    "mobileMaxWidth": 1280,
+    "mobileMaxHeight": 720,
+    "mobileQuery": "(max-width: 767px)",
+    "bufferFrames": 3,
+    "scrubMs": 80,
+    "diffusionWarning": "Floyd and Atkinson are slow on video and flicker between frames. Bayer stays steadier."
+  },
   "view": {
     "minPercent": 10,
     "maxPercent": 1600,

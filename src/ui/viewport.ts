@@ -13,6 +13,7 @@ const maxZoom = spec.maxPercent / 100;
 export function mountViewport(frame: HTMLElement, canvas: HTMLCanvasElement): ViewportHandle {
   const bar = document.createElement("div");
   bar.className = "zoom-bar";
+  bar.dataset.viewChrome = "true";
   bar.hidden = true;
 
   const zoomOut = zoomButton("−", spec.zoomOutLabel);
@@ -168,7 +169,7 @@ export function mountViewport(frame: HTMLElement, canvas: HTMLCanvasElement): Vi
   const onWheel = (event: WheelEvent): void => {
     if (sourceW < 1) return;
     const target = event.target;
-    if (target instanceof Node && bar.contains(target)) return;
+    if (isViewChrome(target)) return;
     event.preventDefault();
     const point = localPoint(event);
     const factor = event.deltaY < 0 ? spec.wheelStep : 1 / spec.wheelStep;
@@ -183,7 +184,7 @@ export function mountViewport(frame: HTMLElement, canvas: HTMLCanvasElement): Vi
   const onPointerDown = (event: PointerEvent): void => {
     if (sourceW < 1) return;
     const target = event.target;
-    if (target instanceof Node && bar.contains(target)) return;
+    if (isViewChrome(target)) return;
     if (event.button !== 0 && event.pointerType === "mouse") return;
     const point = localPoint(event);
     pointers.set(event.pointerId, point);
@@ -303,6 +304,10 @@ export function mountViewport(frame: HTMLElement, canvas: HTMLCanvasElement): Vi
       bar.remove();
     },
   };
+}
+
+function isViewChrome(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest("[data-view-chrome]") !== null;
 }
 
 function zoomButton(text: string, aria: string): HTMLButtonElement {
