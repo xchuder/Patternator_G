@@ -14,6 +14,7 @@ export const appCopy = {
   privacyBody:
     "Image and video files never leave this browser. Nothing is uploaded to a server.",
   privacyLink: "Privacy",
+  studioLink: "Effects",
   rerun: "Run checks again",
 } as const;
 

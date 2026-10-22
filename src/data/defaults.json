@@ -1,0 +1,89 @@
+{
+  "image": {
+    "accept": ["image/png", "image/jpeg", "image/webp"],
+    "extensions": [".png", ".jpg", ".jpeg", ".webp"],
+    "maxDecodeEdge": 8192
+  },
+  "limits": {
+    "previewMaxEdge": 1600,
+    "maxDpr": 2,
+    "desktopVideoMaxEdge": 1080,
+    "mobileVideoMaxEdge": 720,
+    "atlasCell": 96,
+    "maxGlyphs": 96
+  },
+  "prefilter": {
+    "brightness": {
+      "label": "Brightness",
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "default": 0
+    },
+    "contrast": {
+      "label": "Contrast",
+      "min": 0,
+      "max": 2,
+      "step": 0.01,
+      "default": 1
+    },
+    "gamma": {
+      "label": "Gamma",
+      "min": 0.2,
+      "max": 3,
+      "step": 0.01,
+      "default": 1
+    },
+    "threshold": {
+      "label": "Threshold",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "default": 0,
+      "off": 0,
+      "hint": "0 turns threshold off"
+    },
+    "invert": {
+      "label": "Invert",
+      "default": false
+    }
+  },
+  "effects": {
+    "defaultId": "ascii",
+    "ascii": {
+      "label": "ASCII",
+      "charset": " .:-=+*#%@",
+      "charsetLabel": "Character set",
+      "presets": [
+        { "id": "classic", "label": "Classic", "charset": " .:-=+*#%@" },
+        { "id": "symbols", "label": "Symbols", "charset": "△▽☆CZO()8" }
+      ],
+      "cellSize": {
+        "label": "Cell size",
+        "min": 4,
+        "max": 64,
+        "step": 1,
+        "default": 12
+      },
+      "invert": { "label": "Invert ramp", "default": false },
+      "colorMode": "image",
+      "colorModeLabel": "Glyph colour",
+      "colorModes": [
+        { "id": "image", "label": "From image" },
+        { "id": "single", "label": "Single" }
+      ],
+      "singleColor": "#ffffff",
+      "singleColorLabel": "Colour"
+    },
+    "pixelate": {
+      "label": "Pixelate",
+      "blockSize": {
+        "label": "Block size",
+        "min": 2,
+        "max": 80,
+        "step": 1,
+        "default": 12
+      }
+    }
+  }
+}

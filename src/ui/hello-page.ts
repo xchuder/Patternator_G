@@ -90,16 +90,23 @@ export function mountHelloPage(root: HTMLElement): void {
   privacy.className = "panel";
   privacy.append(privacyHeading, privacyBody);
 
+  const studioLink = document.createElement("a");
+  studioLink.className = "nav-link";
+  studioLink.href = "#studio";
+  studioLink.textContent = appCopy.studioLink;
   const privacyLink = document.createElement("a");
   privacyLink.className = "nav-link";
   privacyLink.href = "#privacy";
   privacyLink.textContent = appCopy.privacyLink;
+  const nav = document.createElement("nav");
+  nav.className = "top-nav";
+  nav.append(studioLink, privacyLink);
   const eyebrow = document.createElement("p");
   eyebrow.className = "eyebrow";
   eyebrow.textContent = `${appCopy.name} · ${appCopy.phase}`;
   const top = document.createElement("header");
   top.className = "top";
-  top.append(eyebrow, privacyLink);
+  top.append(eyebrow, nav);
 
   const title = document.createElement("h1");
   title.textContent = appCopy.title;

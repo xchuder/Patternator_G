@@ -2,7 +2,7 @@
 
 Static browser app. Vite + TypeScript. No server.
 
-Phase 0 is the shell and the capability page. Do not add effect features unless that phase is requested.
+Phase 0 is the shell and the capability page. Phase 1a is still images: upload, pre-filter, ASCII, pixelate, PNG export. Do not add dither, halftone, banding, mask, overlay, HUD, palette, SVG, or video unless that phase is requested.
 
 ## Rules
 
@@ -36,13 +36,20 @@ fonts/LICENSES.md
 THIRD_PARTY.md
 public/                    files copied as-is, when a phase needs them
 
-src/effects/               later: ascii, dither, halftone, pixel, banding
-src/render/                later: WebGL2 shaders, Canvas2D fallback
+src/data/defaults.json      slider ranges, default charset, export limits
+src/data/glyph-coverage.json  cmap of the shipped woff files
+src/effects/               one module per effect, behind EffectModule
+src/effects/ascii/         charset, glyph atlas, shader
+src/effects/pixelate/
+src/render/                WebGL2 pipeline and Canvas2D fallback
+src/image/                 createImageBitmap
+src/export/                PNG
 src/workers/               later: Floyd–Steinberg, palette, other CPU work
 src/video/                 later: WebCodecs and Mediabunny
-src/export/                later: PNG, SVG, MP4, ZIP
 ```
 
-Later pipeline: Upload → Decode → Pre-filter → Sample grid → Effect → Palette map → Render → Preview or Export.
+Pipeline: Upload → Decode → Pre-filter → Effect → Preview or PNG. Palette map is a later pass.
+
+A new effect is a folder under `src/effects/<name>` that implements `EffectModule` and is added to `src/effects/registry.ts`. Numeric defaults stay in `src/data/defaults.json`. Glyph coverage is regenerated with `node scripts/extract-glyph-coverage.mjs` when the shipped font files change.
 
 Heavy work goes in a Web Worker. Close each `VideoFrame` as soon as it has been read.

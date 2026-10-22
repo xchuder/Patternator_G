@@ -2,7 +2,11 @@
 
 Patternator is a browser-only app for image and video effects: ASCII, dither, halftone, and pixel treatments, exported as PNG, SVG, or MP4. Everything runs in the page. There is no server.
 
-This revision is Phase 0: the Vite + TypeScript shell, self-hosted fonts, and a page that checks WebGL2, WebCodecs, and `isSecureContext`. Effect features are not built yet.
+Phase 1a adds still-image ASCII and pixelate. Upload a PNG, JPG, or WebP, adjust the pre-filter and the effect, and download a PNG at the image’s original size. Video, dither, halftone, palette, mask, HUD, and SVG are later phases.
+
+Open the page, drop an image on the preview (or use Choose file), then move the sliders. The preview is WebGL2 when the browser has it, otherwise Canvas2D. Character sets that include a glyph in neither JetBrains Mono nor Noto Sans Symbols 2 show a warning. The Symbols preset is `△▽☆CZO()8`.
+
+Browser capability checks remain at `#browser`.
 
 ## Privacy
 
