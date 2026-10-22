@@ -24,7 +24,7 @@ import { mountControls, type ControlHandle } from "./controls";
 import { mountTransport } from "./transport";
 import { mountViewport, type ViewportHandle } from "./viewport";
 
-type TabId = "source" | "filter" | "effect" | "export";
+type TabId = "source" | "adjust" | "export";
 
 interface StudioState {
   bitmap: ImageBitmap | null;
@@ -121,8 +121,7 @@ export function mountStudio(root: HTMLElement): () => void {
 
   const panels = {
     source: document.createElement("div"),
-    filter: document.createElement("div"),
-    effect: document.createElement("div"),
+    adjust: document.createElement("div"),
     export: document.createElement("div"),
   };
   for (const panel of Object.values(panels)) panel.className = "tab-panel";
@@ -138,15 +137,18 @@ export function mountStudio(root: HTMLElement): () => void {
     panels.source.append(codecs);
   }
 
-  mountFilter(panels.filter, state, () => {
+  const prefilterBody = mountSection(panels.adjust, studioCopy.prefilterSection);
+  mountFilter(prefilterBody, state, () => {
     requestDraw();
   });
 
+  const effectBody = mountSection(panels.adjust, studioCopy.effectSection);
   const effectNotice = document.createElement("p");
   effectNotice.className = "notice";
   effectNotice.setAttribute("role", "status");
   const effectFields = document.createElement("div");
-  panels.effect.append(effectNotice, effectFields);
+  effectFields.className = "fold-fields";
+  effectBody.append(effectNotice, effectFields);
 
   const exportButton = document.createElement("button");
   exportButton.type = "button";
@@ -169,8 +171,7 @@ export function mountStudio(root: HTMLElement): () => void {
   tablist.setAttribute("role", "tablist");
   const tabCopy: { id: TabId; label: string }[] = [
     { id: "source", label: studioCopy.sourceTab },
-    { id: "filter", label: studioCopy.filterTab },
-    { id: "effect", label: studioCopy.effectTab },
+    { id: "adjust", label: studioCopy.adjustTab },
     { id: "export", label: studioCopy.exportTab },
   ];
   for (const tab of tabCopy) {
@@ -188,7 +189,7 @@ export function mountStudio(root: HTMLElement): () => void {
 
   const sheet = document.createElement("aside");
   sheet.className = "sheet";
-  sheet.append(meta, alert, tablist, panels.source, panels.filter, panels.effect, panels.export);
+  sheet.append(meta, alert, tablist, panels.source, panels.adjust, panels.export);
 
   const browserLink = document.createElement("a");
   browserLink.className = "nav-link";
@@ -399,7 +400,7 @@ export function mountStudio(root: HTMLElement): () => void {
         renderer.setSource(bitmap);
         viewport.reset(bitmap.width, bitmap.height);
         paintMeta();
-        showTab("effect");
+        showTab("adjust");
         requestDraw();
       })
       .catch((error: unknown) => {
@@ -574,6 +575,20 @@ export function mountStudio(root: HTMLElement): () => void {
     const detail = event instanceof CustomEvent && typeof event.detail === "string" ? event.detail : "";
     showAlert(detail.length > 0 ? detail : studioCopy.readError);
   }
+}
+
+function mountSection(parent: HTMLElement, title: string): HTMLElement {
+  const details = document.createElement("details");
+  details.className = "fold";
+  details.open = true;
+  const summary = document.createElement("summary");
+  summary.className = "fold-summary";
+  summary.textContent = title;
+  const body = document.createElement("div");
+  body.className = "fold-body";
+  details.append(summary, body);
+  parent.append(details);
+  return body;
 }
 
 function mountFilter(parent: HTMLElement, state: StudioState, onChange: () => void): void {
