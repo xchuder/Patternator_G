@@ -65,8 +65,13 @@ export class CpuRenderer implements Renderer {
     applyPrefilter(image, frame.prefilter);
     if (frame.effectId === "ascii") {
       effects.ascii.drawCpu(ctx, image, frame.ascii, bitmap.width, bitmap.height);
+    } else if (frame.effectId === "dither") {
+      effects.dither.drawCpu(ctx, image, frame.dither, bitmap.width, bitmap.height);
     } else {
       effects.pixelate.drawCpu(ctx, image, frame.pixelate, bitmap.width, bitmap.height);
     }
+    canvas.dataset.effect = frame.effectId;
+    const presented = Number(canvas.dataset.presented ?? "0") + 1;
+    canvas.dataset.presented = String(presented);
   }
 }

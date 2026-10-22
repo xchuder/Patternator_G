@@ -289,6 +289,9 @@ h2 {
   display: grid;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
 }
 
 .stage-frame > * {
@@ -296,11 +299,65 @@ h2 {
 }
 
 .preview {
-  place-self: center;
+  position: absolute;
   display: block;
-  max-width: 100%;
-  max-height: 100%;
+  top: 0;
+  left: 0;
+  margin: 0;
+  max-width: none;
+  max-height: none;
   background: #000;
+}
+
+.preview[data-pixelated="true"] {
+  image-rendering: pixelated;
+}
+
+.stage-frame.is-pannable {
+  cursor: grab;
+}
+
+.stage-frame.is-panning {
+  cursor: grabbing;
+}
+
+.zoom-bar {
+  position: absolute;
+  z-index: 3;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: calc(100% - 1rem);
+}
+
+.zoom-button {
+  padding: 0 0.7rem;
+}
+
+.zoom-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+}
+
+.zoom-input {
+  width: 5.25rem;
+  min-height: 44px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 0 0.45rem;
+}
+
+.zoom-unit {
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .stage.dragging .stage-frame {
@@ -509,14 +566,15 @@ input[type="checkbox"] {
 .preset-row,
 .segment {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   min-width: 0;
 }
 
 .preset-row .button,
 .segment-button {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 44px;
 }
 
 .segment-button[aria-pressed="true"] {

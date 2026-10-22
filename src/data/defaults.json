@@ -48,6 +48,18 @@
       "default": false
     }
   },
+  "view": {
+    "minPercent": 10,
+    "maxPercent": 1600,
+    "buttonStep": 2,
+    "wheelStep": 1.1,
+    "panMargin": 48,
+    "zoomLabel": "Zoom",
+    "zoomInLabel": "Zoom in",
+    "zoomOutLabel": "Zoom out",
+    "fitLabel": "Fit",
+    "actualLabel": "100%"
+  },
   "effects": {
     "defaultId": "ascii",
     "ascii": {
@@ -84,6 +96,32 @@
         "step": 1,
         "default": 12
       }
+    },
+    "dither": {
+      "label": "Dither Bitmap",
+      "method": "floyd",
+      "methodLabel": "Method",
+      "methods": [
+        { "id": "threshold", "label": "50%" },
+        { "id": "floyd", "label": "Floyd" },
+        { "id": "atkinson", "label": "Atkinson" },
+        { "id": "bayer2", "label": "Bayer 2" },
+        { "id": "bayer4", "label": "Bayer 4" },
+        { "id": "bayer8", "label": "Bayer 8" }
+      ],
+      "threshold": 0.5,
+      "cellScale": {
+        "label": "Dot scale",
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "default": 1
+      },
+      "colorA": "#000000",
+      "colorALabel": "Dark",
+      "colorB": "#ffffff",
+      "colorBLabel": "Light",
+      "diffusionHint": "Floyd and Atkinson run in a worker. Bayer and 50% stay on the GPU."
     }
   }
 }

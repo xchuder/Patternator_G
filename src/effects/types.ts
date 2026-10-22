@@ -1,10 +1,10 @@
 import type { EffectId } from "../data/defaults";
 
 /**
- * One effect module behind this shape. Later phases add dither, halftone,
+ * One effect module behind this shape. Later phases add halftone,
  * banding, mask, overlay, HUD, palette, and SVG as new modules — the pipeline
- * stays pre-filter, then the active effect. CPU-only effects (Floyd–Steinberg)
- * belong in src/workers and can implement drawCpu without a fragment shader.
+ * stays pre-filter, then the active effect. Floyd–Steinberg and Atkinson run
+ * in src/workers. Bayer and the 50% threshold stay on the fragment shader.
  */
 export interface DrawSize {
   sourceWidth: number;

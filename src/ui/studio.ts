@@ -1,7 +1,8 @@
-import { defaults, initialAscii, initialEffectId, initialPixelate, initialPrefilter, type AsciiParams, type EffectId, type PixelateParams, type PrefilterParams } from "../data/defaults";
+import { defaults, initialAscii, initialDither, initialEffectId, initialPixelate, initialPrefilter, type AsciiParams, type DitherParams, type EffectId, type PixelateParams, type PrefilterParams } from "../data/defaults";
 import { loadGlyphFonts } from "../effects/ascii/atlas";
 import { charsetWarnings } from "../effects/ascii/charset";
 import { effectOrder, effects } from "../effects/registry";
+import type { ControlValue } from "../effects/types";
 import { downloadBlob, exportFilename } from "../export/png";
 import { decodeImage, ImageLoadError } from "../image/load";
 import { createRenderer } from "../render/create-renderer";
@@ -15,6 +16,7 @@ import {
   videoLimitMessage,
 } from "../data/studio-copy";
 import { mountControls, type ControlHandle } from "./controls";
+import { mountViewport, type ViewportHandle } from "./viewport";
 
 type TabId = "source" | "filter" | "effect" | "export";
 
@@ -25,6 +27,7 @@ interface StudioState {
   prefilter: PrefilterParams;
   ascii: AsciiParams;
   pixelate: PixelateParams;
+  dither: DitherParams;
 }
 
 export function mountStudio(root: HTMLElement): () => void {
@@ -35,6 +38,7 @@ export function mountStudio(root: HTMLElement): () => void {
     prefilter: initialPrefilter(),
     ascii: initialAscii(),
     pixelate: initialPixelate(),
+    dither: initialDither(),
   };
 
   const fileInput = document.createElement("input");
@@ -170,6 +174,7 @@ export function mountStudio(root: HTMLElement): () => void {
   root.replaceChildren(studio);
 
   const renderer = createRenderer(canvas);
+  const viewport: ViewportHandle = mountViewport(frame, canvas);
   let effectControls: ControlHandle | null = null;
   let raf = 0;
   let fontsReady = false;
@@ -240,16 +245,11 @@ export function mountStudio(root: HTMLElement): () => void {
     choiceField.append(choiceName, choice);
     effectFields.append(choiceField);
 
-    const active = state.effectId === "ascii" ? effects.ascii : effects.pixelate;
+    const active = effects[state.effectId];
     effectControls = mountControls(effectFields, active.controls(), activeParams(state), (key, value) => {
-      if (state.effectId === "ascii") {
-        state.ascii = effects.ascii.withControl(state.ascii, key, value);
-        effectControls?.sync(state.ascii);
-        paintNotice();
-      } else {
-        state.pixelate = effects.pixelate.withControl(state.pixelate, key, value);
-        effectControls?.sync(state.pixelate);
-      }
+      applyEffectControl(state, key, value);
+      effectControls?.sync(activeParams(state));
+      paintNotice();
       requestDraw();
     });
   };
@@ -270,20 +270,12 @@ export function mountStudio(root: HTMLElement): () => void {
   const drawNow = (): void => {
     const bitmap = state.bitmap;
     if (bitmap === null || !fontsReady) return;
-    const boxW = frame.clientWidth;
-    const boxH = frame.clientHeight;
-    if (boxW < 2 || boxH < 2) return;
-    const size = previewPixels(bitmap.width, bitmap.height, boxW, boxH);
-    canvas.style.width = `${size.cssW}px`;
-    canvas.style.height = `${size.cssH}px`;
+    viewport.layout();
     try {
       renderer.draw(bitmap, {
-        effectId: state.effectId,
-        prefilter: state.prefilter,
-        ascii: state.ascii,
-        pixelate: state.pixelate,
-        width: size.bufW,
-        height: size.bufH,
+        ...frameBody(state),
+        width: bitmap.width,
+        height: bitmap.height,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : studioCopy.readError;
@@ -306,6 +298,7 @@ export function mountStudio(root: HTMLElement): () => void {
         canvas.hidden = false;
         drop.hidden = true;
         renderer.setSource(bitmap);
+        viewport.reset(bitmap.width, bitmap.height);
         paintMeta();
         showTab("effect");
         requestDraw();
@@ -363,12 +356,7 @@ export function mountStudio(root: HTMLElement): () => void {
     exportButton.textContent = studioCopy.preparing;
     let saved = "";
     void renderer
-      .exportPng(bitmap, {
-        effectId: state.effectId,
-        prefilter: state.prefilter,
-        ascii: state.ascii,
-        pixelate: state.pixelate,
-      })
+      .exportPng(bitmap, frameBody(state))
       .then((blob) => {
         saved = exportFilename(state.fileName, state.effectId);
         downloadBlob(blob, saved);
@@ -387,9 +375,10 @@ export function mountStudio(root: HTMLElement): () => void {
   });
 
   const observer = new ResizeObserver(() => {
-    requestDraw();
+    viewport.layout();
   });
   observer.observe(frame);
+  canvas.addEventListener("render-fault", onRenderFault);
 
   showTab("source");
   mountEffectFields();
@@ -404,11 +393,18 @@ export function mountStudio(root: HTMLElement): () => void {
   return () => {
     if (raf !== 0) cancelAnimationFrame(raf);
     observer.disconnect();
+    canvas.removeEventListener("render-fault", onRenderFault);
     window.removeEventListener("dragover", stopNavigation);
     window.removeEventListener("drop", stopNavigation);
+    viewport.dispose();
     state.bitmap?.close();
     renderer.dispose();
   };
+
+  function onRenderFault(event: Event): void {
+    const detail = event instanceof CustomEvent && typeof event.detail === "string" ? event.detail : "";
+    showAlert(detail.length > 0 ? detail : studioCopy.readError);
+  }
 }
 
 function mountFilter(parent: HTMLElement, state: StudioState, onChange: () => void): void {
@@ -467,34 +463,42 @@ function mountFilter(parent: HTMLElement, state: StudioState, onChange: () => vo
   parent.append(invert);
 }
 
-function previewPixels(
-  srcW: number,
-  srcH: number,
-  boxW: number,
-  boxH: number,
-): { cssW: number; cssH: number; bufW: number; bufH: number } {
-  const contain = Math.min(boxW / srcW, boxH / srcH);
-  const cssW = Math.max(1, Math.floor(srcW * contain));
-  const cssH = Math.max(1, Math.floor(srcH * contain));
-  const dpr = Math.min(window.devicePixelRatio || 1, defaults.limits.maxDpr);
-  let bufW = Math.max(1, Math.round(cssW * dpr));
-  let bufH = Math.max(1, Math.round(cssH * dpr));
-  const edge = Math.max(bufW, bufH);
-  if (edge > defaults.limits.previewMaxEdge) {
-    const scale = defaults.limits.previewMaxEdge / edge;
-    bufW = Math.max(1, Math.round(bufW * scale));
-    bufH = Math.max(1, Math.round(bufH * scale));
-  }
+function frameBody(state: StudioState): {
+  effectId: EffectId;
+  prefilter: PrefilterParams;
+  ascii: AsciiParams;
+  pixelate: PixelateParams;
+  dither: DitherParams;
+} {
   return {
-    cssW,
-    cssH,
-    bufW: Math.min(bufW, srcW),
-    bufH: Math.min(bufH, srcH),
+    effectId: state.effectId,
+    prefilter: state.prefilter,
+    ascii: state.ascii,
+    pixelate: state.pixelate,
+    dither: state.dither,
   };
 }
 
-function activeParams(state: StudioState): AsciiParams | PixelateParams {
-  return state.effectId === "ascii" ? state.ascii : state.pixelate;
+function activeParams(state: StudioState): AsciiParams | PixelateParams | DitherParams {
+  if (state.effectId === "ascii") return state.ascii;
+  if (state.effectId === "dither") return state.dither;
+  return state.pixelate;
+}
+
+function applyEffectControl(state: StudioState, key: string, value: ControlValue): void {
+  switch (state.effectId) {
+    case "ascii":
+      state.ascii = effects.ascii.withControl(state.ascii, key, value);
+      break;
+    case "pixelate":
+      state.pixelate = effects.pixelate.withControl(state.pixelate, key, value);
+      break;
+    case "dither":
+      state.dither = effects.dither.withControl(state.dither, key, value);
+      break;
+    default:
+      break;
+  }
 }
 
 function formatSlider(value: number, step: number, min: number): string {

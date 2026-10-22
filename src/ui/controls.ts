@@ -210,6 +210,12 @@ function mountSegment(
   }
   paint(value);
   wrap.append(name, row);
+  if (spec.hint !== undefined) {
+    const hint = document.createElement("span");
+    hint.className = "field-hint";
+    hint.textContent = spec.hint;
+    wrap.append(hint);
+  }
   parent.append(wrap);
   return wrap;
 }

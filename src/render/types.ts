@@ -1,10 +1,17 @@
-import type { AsciiParams, EffectId, PixelateParams, PrefilterParams } from "../data/defaults";
+import type {
+  AsciiParams,
+  DitherParams,
+  EffectId,
+  PixelateParams,
+  PrefilterParams,
+} from "../data/defaults";
 
 export interface FrameRequest {
   effectId: EffectId;
   prefilter: PrefilterParams;
   ascii: AsciiParams;
   pixelate: PixelateParams;
+  dither: DitherParams;
   width: number;
   height: number;
 }

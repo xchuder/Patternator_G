@@ -2,9 +2,9 @@
 
 Patternator is a browser-only app for image and video effects: ASCII, dither, halftone, and pixel treatments, exported as PNG, SVG, or MP4. Everything runs in the page. There is no server.
 
-Phase 1a adds still-image ASCII and pixelate. Upload a PNG, JPG, or WebP, adjust the pre-filter and the effect, and download a PNG at the image’s original size. Video, dither, halftone, palette, mask, HUD, and SVG are later phases.
+Phase 1a adds still-image ASCII, pixelate, and dither bitmap. Upload a PNG, JPG, or WebP, adjust the pre-filter and the effect, and download a PNG at the image’s original size. The preview zooms from 10% to 1600% and pans inside the frame; that view does not change the PNG. Video, halftone, palette, mask, HUD, and SVG are later phases.
 
-Open the page, drop an image on the preview (or use Choose file), then move the sliders. The preview is WebGL2 when the browser has it, otherwise Canvas2D. Character sets that include a glyph in neither JetBrains Mono nor Noto Sans Symbols 2 show a warning. The Symbols preset is `△▽☆CZO()8`.
+Open the page, drop an image on the preview (or use Choose file), then move the sliders. Dither Bitmap includes Floyd–Steinberg and Atkinson (a worker), ordered Bayer 2×2, 4×4, and 8×8, and a 50% threshold. The preview is WebGL2 when the browser has it, otherwise Canvas2D. Zoom with the buttons, the percent field, the mouse wheel, or a pinch. Drag to pan when the image is larger than the frame, or hold Space and drag. Above 100% the preview uses nearest-neighbour so the pixels stay crisp. Character sets that include a glyph in neither JetBrains Mono nor Noto Sans Symbols 2 show a warning. The Symbols preset is `△▽☆CZO()8`.
 
 Browser capability checks remain at `#browser`.
 

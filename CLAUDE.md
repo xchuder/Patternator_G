@@ -2,7 +2,7 @@
 
 Static browser app. Vite + TypeScript. No server.
 
-Phase 0 is the shell and the capability page. Phase 1a is still images: upload, pre-filter, ASCII, pixelate, PNG export. Do not add dither, halftone, banding, mask, overlay, HUD, palette, SVG, or video unless that phase is requested.
+Phase 0 is the shell and the capability page. Phase 1a is still images: upload, pre-filter, ASCII, pixelate, dither bitmap, PNG export, and preview zoom. Do not add halftone, banding, mask, overlay, HUD, palette, SVG, or video unless that phase is requested.
 
 ## Rules
 
@@ -41,10 +41,12 @@ src/data/glyph-coverage.json  cmap of the shipped woff files
 src/effects/               one module per effect, behind EffectModule
 src/effects/ascii/         charset, glyph atlas, shader
 src/effects/pixelate/
+src/effects/dither/        bitmap dither: Bayer shader, Floyd and Atkinson in a worker
 src/render/                WebGL2 pipeline and Canvas2D fallback
 src/image/                 createImageBitmap
 src/export/                PNG
-src/workers/               later: Floyd–Steinberg, palette, other CPU work
+src/ui/viewport.ts         preview zoom and pan (does not change export size)
+src/workers/               Floyd–Steinberg and Atkinson. Palette and other CPU work later
 src/video/                 later: WebCodecs and Mediabunny
 ```
 
