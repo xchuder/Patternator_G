@@ -2,7 +2,7 @@
 
 Static browser app. Vite + TypeScript. No server.
 
-Phase 0 is the shell and the capability page. Phase 1a is still images: upload, pre-filter, ASCII, pixelate, dither bitmap, PNG export, and preview zoom. Do not add halftone, banding, mask, overlay, HUD, palette, SVG, or video unless that phase is requested.
+Phase 0 is the shell and the capability page. Phase 1a is still images: upload, pre-filter, ASCII, pixelate, dither bitmap, PNG export, and preview zoom. Phase 2 adds video preview (MP4/WebM, Mediabunny, WebCodecs) without MP4 export. Do not add halftone, banding, mask, overlay, HUD, palette, SVG, or MP4 export unless that phase is requested.
 
 ## Rules
 
@@ -46,8 +46,8 @@ src/render/                WebGL2 pipeline and Canvas2D fallback
 src/image/                 createImageBitmap
 src/export/                PNG
 src/ui/viewport.ts         preview zoom and pan (does not change export size)
-src/workers/               Floyd–Steinberg and Atkinson. Palette and other CPU work later
-src/video/                 later: WebCodecs and Mediabunny
+src/workers/               Floyd–Steinberg, Atkinson, and video decode
+src/video/                 Mediabunny demux and WebCodecs playback. MP4 export is later
 ```
 
 Pipeline: Upload → Decode → Pre-filter → Effect → Preview or PNG. Palette map is a later pass.
